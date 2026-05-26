@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TajweedQuest - Complete Learning Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #58cc02; --primary-dark: #46a302;
+      --secondary: #ffc800; --danger: #ff4b4b;
+      --bg: #131f24; --card: #202f36; --card-hover: #2a3b44;
+      --text: #ffffff; --muted: #a5b3b9; --border: #37464f;
+      --radius: 16px; --shadow: 0 6px 15px rgba(0,0,0,0.3);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+    .arabic { font-family: 'Amiri', serif; font-size: 28px; line-height: 1.8; direction: rtl; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--card); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .stat { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
+    .stat svg { width: 20px; height: 20px; }
+    .xp { color: var(--secondary); } .hearts { color: var(--danger); } .streak { color: var(--primary); }
+
+    .path-container { max-width: 500px; margin: 30px auto; padding: 0 15px 80px; display: flex; flex-direction: column; align-items: center; gap: 25px; position: relative; }
+    .path-line { position: absolute; left: 50%; top: 20px; bottom: 20px; width: 4px; background: var(--border); transform: translateX(-50%); z-index: 0; }
+    .rule-section { width: 100%; position: relative; z-index: 1; }
+    .rule-title { background: var(--card-hover); padding: 10px 16px; border-radius: 12px; font-weight: 600; margin-bottom: 20px; text-align: center; box-shadow: var(--shadow); }
+    .lesson-node { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: all 0.2s; position: relative; box-shadow: var(--shadow); border: 4px solid transparent; }
+    .lesson-node.completed { background: var(--primary); color: white; }
+    .lesson-node.current { background: var(--primary); color: white; border-color: var(--secondary); transform: scale(1.1); animation: float 2s infinite ease-in-out; }
+    @keyframes float { 0%, 100% { transform: scale(1.1) translateY(0); } 50% { transform: scale(1.1) translateY(-5px); } }
+    .lesson-node.locked { background: var(--card-hover); color: var(--muted); cursor: not-allowed; }
+    .lesson-node:hover:not(.locked) { transform: scale(1.05); }
+    .lesson-label { position: absolute; bottom: -22px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .path-row { display: flex; justify-content: center; width: 100%; margin-bottom: 10px; }
+    .path-row:nth-child(even) { justify-content: flex-start; padding-left: 15%; }
+    .path-row:nth-child(odd) { justify-content: flex-end; padding-right: 15%; }
+
+    .modal { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: none; flex-direction: column; animation: slideUp 0.3s ease; }
+    .modal.active { display: flex; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--card); }
+    .close-btn { background: none; border: none; color: var(--muted); font-size: 24px; cursor: pointer; padding: 5px; }
+    .progress-bar { flex: 1; height: 8px; background: var(--border); border-radius: 4px; margin: 0 15px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--primary); transition: width 0.3s ease; width: 0%; }
+    
+    .question-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; overflow-y: auto; }
+    .q-title { font-size: 20px; margin-bottom: 15px; }
+    .q-arabic { font-size: 32px; margin-bottom: 20px; color: var(--secondary); }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 400px; margin-bottom: 20px; }
+    .option-btn { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; font-size: 15px; color: var(--text); transition: 0.2s; display: flex; align-items: center; justify-content: center; min-height: 56px; }
+    .option-btn:hover { border-color: var(--primary); background: var(--card-hover); }
+    .option-btn.selected { border-color: var(--primary); background: rgba(88, 204, 2, 0.2); }
+    .option-btn.correct { border-color: var(--primary); background: var(--primary); color: white; }
+    .option-btn.wrong { border-color: var(--danger); background: var(--danger); color: white; opacity: 0.8; }
+    .option-btn:disabled { cursor: default; opacity: 0.7; }
+
+    .check-btn { background: var(--primary); color: white; border: none; padding: 14px; width: 90%; max-width: 400px; border-radius: 12px; font-size: 16px; font-weight: 600; margin: 0 auto 20px; cursor: pointer; box-shadow: 0 4px 0 var(--primary-dark); transition: all 0.1s; }
+    .check-btn:active { transform: translateY(4px); box-shadow: none; }
+    .check-btn:disabled { background: var(--card-hover); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+
+    .feedback-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20px; background: var(--card); border-top: 2px solid var(--border); transform: translateY(100%); transition: transform 0.3s ease; z-index: 210; }
+    .feedback-bar.show { transform: translateY(0); }
+    .feedback-bar.correct { border-top-color: var(--primary); background: #1a2a1a; }
+    .feedback-bar.wrong { border-top-color: var(--danger); background: #2a1a1a; }
+    .fb-content { display: flex; flex-direction: column; gap: 10px; max-width: 500px; margin: 0 auto; }
+    .fb-text { font-weight: 600; font-size: 16px; }
+    .fb-explanation { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .fb-example { background: var(--card-hover); padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 13px; }
+    .continue-btn { padding: 10px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; align-self: flex-end; }
+    .feedback-bar.correct .continue-btn { background: var(--primary); color: white; }
+    .feedback-bar.wrong .continue-btn { background: var(--danger); color: white; }
+
+    .result-screen { text-align: center; padding: 40px 20px; }
+    .result-screen h2 { font-size: 28px; margin-bottom: 10px; }
+    .result-screen p { color: var(--muted); margin-bottom: 25px; }
+    .xp-badge { background: var(--card); padding: 15px; border-radius: 16px; display: inline-block; margin-bottom: 20px; }
+    .xp-badge span { color: var(--secondary); font-size: 24px; font-weight: bold; }
+
+    .resource-links { margin-top: 15px; padding: 15px; background: var(--card-hover); border-radius: 12px; }
+    .resource-links h4 { margin-bottom: 10px; color: var(--secondary); }
+    .resource-links a { display: block; color: var(--primary); text-decoration: none; margin: 5px 0; font-size: 14px; }
+    .resource-links a:hover { text-decoration: underline; }
+
+    .lesson-intro { background: var(--card-hover); padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: left; }
+    .lesson-intro h3 { color: var(--secondary); margin-bottom: 10px; }
+    .lesson-intro p { margin: 8px 0; line-height: 1.6; }
+    .example-box { background: var(--card); padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 3px solid var(--primary); }
+
+    @media (max-width: 600px) {
+      .options-grid { grid-template-columns: 1fr; }
+      .lesson-node { width: 56px; height: 56px; font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="stat streak"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8 2 5 5 5 9c0 3 2 5 3 7s4 6 4 6 3-4 4-6 3-4 3-7c0-4-3-7-7-7zm0 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg> <span id="streak-val">1</span></div>
+    <div class="stat xp"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L1 21h22L12 2zm0 4l7.53 12H4.47L12 6zm-1 5v2h2v-2h-2z"/></svg> <span id="xp-val">0</span> XP</div>
+    <div class="stat hearts"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> <span id="hearts-val">5</span></div>
+  </header>
+
+  <main id="path-view" class="path-container">
+    <div class="path-line"></div>
+  </main>
+
+  <div id="lesson-modal" class="modal">
+    <div class="modal-header">
+      <button class="close-btn" onclick="closeLesson()">✕</button>
+      <div class="progress-bar"><div id="lesson-progress" class="progress-fill"></div></div>
+    </div>
+    <div id="question-container" class="question-area"></div>
+    <button id="check-btn" class="check-btn" disabled onclick="submitAnswer()">CHECK</button>
+  </div>
+
+  <div id="feedback-bar" class="feedback-bar">
+    <div class="fb-content">
+      <div>
+        <div id="fb-text" class="fb-text"></div>
+        <div id="fb-explanation" class="fb-explanation"></div>
+        <div id="fb-example" class="fb-example"></div>
+      </div>
+      <button id="continue-btn" class="continue-btn" onclick="nextQuestion()">CONTINUE</button>
+    </div>
+  </div>
+
+  <div id="result-screen" class="modal">
+    <div class="result-screen">
+      <h2 id="res-title"></h2>
+      <div class="xp-badge">+<span id="res-xp">0</span> XP</div>
+      <p id="res-msg"></p>
+      <button class="check-btn" onclick="closeResult()">CONTINUE</button>
+    </div>
+  </div>
+
+<script>
+  // === ENHANCED CURRICULUM WITH MULTIPLE QUESTIONS, EXAMPLES & RESOURCES ===
+  const CURRICULUM = [
+    { 
+      id: "rule1", 
+      title: "🔤 Madd (Elongation)", 
+      lessons: [
+        { 
+          id: "1.1", 
+          title: "Natural Madd (Madd Tabiee)",
+          intro: "Madd Tabiee (Natural Madd) occurs when a fatha is followed by alif, kasra by ya, or damma by waw. It must be elongated for 2 counts.",
+          examples: ["قَالَ (qaala)", "قِيلَ (qeela)", "يَقُولُ (yaqoolu)"],
+          questions: [
+            { type: "mc", q: "How many counts is Madd Tabiee elongated?", options: ["1 count", "2 counts", "4 counts", "6 counts"], ans: 1, explanation: "Madd Tabiee is always elongated for exactly 2 counts (harakatayn).", example: "In قَالَ, the alif after fatha is held for 2 counts" },
+            { type: "mc", q: "Which combination creates Natural Madd?", options: ["Fatha + Alif", "Damma + Ya", "Kasra + Waw", "Sukoon + Alif"], ans: 0, explanation: "Natural Madd occurs with: Fatha+Alif, Kasra+Ya, or Damma+Waw", example: "قَالَ (fatha+alif), قِيلَ (kasra+ya), يَقُولُ (damma+waw)" },
+            { type: "fill", q: "Type the elongated letter in: سَمَاع", ans: "ا", explanation: "The alif after the fatha on م creates natural madd", example: "سَمَاع = samaa' (elongate the alif for 2 counts)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_madd",
+            article: "https://quranicarabic.com/tajweed/madd-tabiee"
+          }
+        },
+        { 
+          id: "1.2", 
+          title: "Connected Madd (Madd Muttaasil)",
+          intro: "Madd Muttaasil occurs when a madd letter is followed by a hamza in the SAME word. It is elongated for 4-5 counts.",
+          examples: ["جَاءَ (jaa'a)", "سُوْءَ (soo'a)", "الْخَوْفُ (al-khawf)"],
+          questions: [
+            { type: "mc", q: "Madd Muttaasil happens when hamza is:", options: ["In the next word", "In the same word", "Missing", "At the beginning"], ans: 1, explanation: "Muttaasil means 'connected' - the hamza must be in the same word as the madd letter.", example: "جَاءَ has madd and hamza in one word" },
+            { type: "mc", q: "How long is Madd Muttaasil elongated?", options: ["2 counts", "4-5 counts", "6 counts", "1 count"], ans: 1, explanation: "Connected madd is elongated for 4-5 counts (harakat), longer than natural madd.", example: "In جَاءَ, elongate the alif for 4-5 counts" },
+            { type: "mc", q: "Which word contains Madd Muttaasil?", options: ["قَالُوا", "جَاءَ", "سَمَاء", "كِتَاب"], ans: 1, explanation: "جَاءَ has alif madd followed by hamza in the same word.", example: "جَاءَ = jaa'a (madd+hamza connected)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_muttaasil",
+            article: "https://quranicarabic.com/tajweed/madd-muttaasil"
+          }
+        },
+        { 
+          id: "1.3", 
+          title: "Disconnected Madd (Madd Munfasil)",
+          intro: "Madd Munfasil occurs when a madd letter is at the end of one word and hamza is at the beginning of the NEXT word. Elongated for 4-5 counts.",
+          examples: ["يَا أَيُّهَا (yaa ayyuha)", "قَالُوا آمَنَّا (qaaloo aamanna)"],
+          questions: [
+            { type: "mc", q: "Madd Munfasil occurs when hamza is in:", options: ["Same word", "Next word", "Previous word", "Two words later"], ans: 1, explanation: "Munfasil means 'separated' - the madd and hamza are in different words.", example: "يَا أَيُّهَا - madd in يَا, hamza in أَيُّهَا" },
+            { type: "fill", q: "In 'يَا أَيُّهَا', the madd letter is:", ans: "ا", explanation: "The alif in يَا is followed by hamza in the next word", example: "يَا (ends with madd) + أَيُّهَا (starts with hamza)" },
+            { type: "mc", q: "How long is Madd Munfasil?", options: ["2 counts", "4-5 counts", "6 counts", "No elongation"], ans: 1, explanation: "Like Muttaasil, Munfasil is elongated for 4-5 counts.", example: "قَالُوا آمَنَّا - elongate و for 4-5 counts" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_munfasil",
+            article: "https://quranicarabic.com/tajweed/madd-munfasil"
+          }
+        }
+      ] 
+    },
+    { 
+      id: "rule2", 
+      title: "👃 Ghunnah (Nasalization)", 
+      lessons: [
+        { 
+          id: "2.1", 
+          title: "Ghunnah Letters & Duration",
+          intro: "Ghunnah is a nasal sound produced from the nose. It applies to ن (noon) and م (meem) when they have shaddah. Duration is 2 counts.",
+          examples: ["إِنَّ (inna)", "مُحَمَّد (Muhammad)", "أَنَّ (anna)"],
+          questions: [
+            { type: "mc", q: "Which letters carry Ghunnah?", options: ["ب ت ث", "ن م", "ص ض ط", "ل ر"], ans: 1, explanation: "Only ن (noon) and م (meem) produce ghunnah when they have shaddah or noon saakin.", example: "إِنَّ has ghunnah on نّ" },
+            { type: "mc", q: "How long is Ghunnah held?", options: ["1 count", "2 counts", "4 counts", "6 counts"], ans: 1, explanation: "Ghunnah is held for 2 counts (harakatayn), same as natural madd.", example: "In مُحَمَّد, hold the nasal sound on مّ for 2 counts" },
+            { type: "fill", q: "Type the letter with ghunnah in: إِنَّ", ans: "ن", explanation: "The ن with shaddah produces ghunnah", example: "إِنَّ = inna (nasalize the noon for 2 counts)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_ghunnah",
+            article: "https://quranicarabic.com/tajweed/ghunnah"
+          }
+        },
+        { 
+          id: "2.2", 
+          title: "Ghunnah with Shaddah",
+          intro: "When ن or م has shaddah (ّ), the ghunnah is emphasized. Shaddah means the letter is doubled - first with sukoon, second with vowel.",
+          examples: ["ثُمَّ (thumma)", "إِنَّ اللَّهَ (inna Allah)", "الرَّحِيمِ (ar-raheem)"],
+          questions: [
+            { type: "mc", q: "Shaddah on ن or م indicates:", options: ["No ghunnah", "Emphasized ghunnah", "Short ghunnah", "Silent letter"], ans: 1, explanation: "Shaddah doubles the letter, creating a strong ghunnah for 2 counts.", example: "ثُمَّ has strong ghunnah on مّ" },
+            { type: "mc", q: "Which has the strongest ghunnah?", options: ["نْ", "نَ", "نّ", "نِ"], ans: 2, explanation: "Shaddah (نّ) creates the strongest, most emphasized ghunnah.", example: "إِنَّ has stronger ghunnah than مِنْ" },
+            { type: "fill", q: "In 'مُحَمَّد', which letter has ghunnah?", ans: "م", explanation: "The م with shaddah produces ghunnah", example: "مُحَمَّد = Muhammad (nasalize the meem)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_ghunnah_shaddah",
+            article: "https://quranicarabic.com/tajweed/ghunnah-shaddah"
+          }
+        },
+        { 
+          id: "2.3", 
+          title: "Ghunnah in Noon Saakin",
+          intro: "Noon Saakin (نْ) also produces ghunnah, especially in Idgham and Ikhfa rules. The ghunnah is clear and must not be skipped.",
+          examples: ["مِنْ بَعْدِ (min ba'di)", "أَنْعَمْتَ (an'amta)", "يَنْصُرُ (yansuru)"],
+          questions: [
+            { type: "mc", q: "Noon Saakin produces ghunnah when:", options: ["Always", "Never", "Only with shaddah", "Only at end"], ans: 0, explanation: "Noon Saakin always has some ghunnah, though its clarity varies by rule.", example: "مِنْ has ghunnah even without shaddah" },
+            { type: "mc", q: "In which position is ghunnah clearest?", options: ["Izhar", "Idgham with ghunnah", "Qalqalah", "Madd"], ans: 1, explanation: "Idgham with ghunnah (ي ن م و) makes the nasal sound very clear.", example: "مِنْ وَرَائِهِمْ - strong ghunnah before و" },
+            { type: "fill", q: "Type the noon with ghunnah: أَنْعَمْتَ", ans: "ن", explanation: "The نْ in أَنْعَمْتَ has ghunnah", example: "أَنْعَمْتَ = an'amta (nasalize the noon)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_noon_ghunnah",
+            article: "https://quranicarabic.com/tajweed/noon-ghunnah"
+          }
+        }
+      ] 
+    },
+    { 
+      id: "rule3", 
+      title: "💥 Qalqalah (Bounce)", 
+      lessons: [
+        { 
+          id: "3.1", 
+          title: "Qalqalah Letters",
+          intro: "Qalqalah is a bouncing/echo sound. It applies to 5 letters: ق ط ب ج د when they have sukoon. Remember: 'قطب جد' (Qutbujadd).",
+          examples: ["يَطْمَعُ (yatma')", "أَحَدٌ (ahad)", "يَبْخَلُ (yabkhal)"],
+          questions: [
+            { type: "mc", q: "How many letters have Qalqalah?", options: ["3", "5", "7", "9"], ans: 1, explanation: "Five letters: ق ط ب ج د (Qaf, Ta, Ba, Jeem, Dal)", example: "Remember: قطب جد (Qutbujadd)" },
+            { type: "mc", q: "Qalqalah occurs when the letter has:", options: ["Fatha", "Kasra", "Sukoon", "Shaddah"], ans: 2, explanation: "Qalqalah only happens when these 5 letters have sukoon (no vowel).", example: "أَحَدْ has qalqalah on دْ" },
+            { type: "fill", q: "Type the qalqalah letter: يَطْمَعُ", ans: "ط", explanation: "The ط with sukoon produces qalqalah", example: "يَطْمَعُ = yatma' (bounce on ط)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_qalqalah",
+            article: "https://quranicarabic.com/tajweed/qalqalah"
+          }
+        },
+        { 
+          id: "3.2", 
+          title: "Qalqalah Sughra (Minor)",
+          intro: "Qalqalah Sughra (minor) occurs when the qalqalah letter is in the MIDDLE of a word with sukoon. The bounce is subtle.",
+          examples: ["يَطْمَعُ (yatma')", "يَبْخَلُ (yabkhal)", "أَجْرًا (ajran)"],
+          questions: [
+            { type: "mc", q: "Qalqalah Sughra happens when the letter is:", options: ["At end of ayah", "In middle of word", "At start", "With shaddah"], ans: 1, explanation: "Sughra (minor) is when qalqalah letter with sukoon is in the middle of a word.", example: "يَطْمَعُ - طْ is in the middle" },
+            { type: "mc", q: "The bounce in Qalqalah Sughra is:", options: ["Very strong", "Subtle", "Nonexistent", "Like Madd"], ans: 1, explanation: "Minor qalqalah has a subtle, gentle bounce - not too strong.", example: "يَبْخَلُ - gentle bounce on بْ" },
+            { type: "mc", q: "Which has Qalqalah Sughra?", options: ["قُلْ", "يَطْمَعُ", "أَحَدْ", "مَسْجِد"], ans: 1, explanation: "يَطْمَعُ has طْ in the middle of the word.", example: "يَطْمَعُ = yatma' (middle qalqalah)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_sughra",
+            article: "https://quranicarabic.com/tajweed/qalqalah-sughra"
+          }
+        },
+        { 
+          id: "3.3", 
+          title: "Qalqalah Kubra (Major)",
+          intro: "Qalqalah Kubra (major) occurs when the qalqalah letter is at the END of an ayah/verse with sukoon. The bounce is strong and emphasized.",
+          examples: ["الْفَلَقِ (al-falaq)", "أَحَدٌ (ahad)", "الصَّمَدِ (as-samad)"],
+          questions: [
+            { type: "mc", q: "Qalqalah Kubra happens at:", options: ["Middle of word", "End of ayah", "Start of word", "After madd"], ans: 1, explanation: "Kubra (major) occurs when qalqalah letter is at the end of a verse with sukoon.", example: "قُلْ هُوَ اللَّهُ أَحَدْ - strong bounce on دْ" },
+            { type: "mc", q: "The bounce in Qalqalah Kubra is:", options: ["Subtle", "Strong and emphasized", "Silent", "Like ghunnah"], ans: 1, explanation: "Major qalqalah has a strong, clear bounce that must be emphasized.", example: "الْفَلَقِ - strong bounce on قْ at end" },
+            { type: "fill", q: "In 'أَحَدْ', the qalqalah letter is:", ans: "د", explanation: "The دْ at the end has major qalqalah", example: "أَحَدْ = ahad (strong bounce on dal)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_kubra",
+            article: "https://quranicarabic.com/tajweed/qalqalah-kubra"
+          }
+        }
+      ] 
+    },
+    { 
+      id: "rule4", 
+      title: "☪️ Noon Saakin & Tanween", 
+      lessons: [
+        { 
+          id: "4.1", 
+          title: "Izhar (Clear Pronunciation)",
+          intro: "Izhar means to pronounce noon saakin or tanween CLEARLY without ghunnah. It occurs when followed by 6 throat letters: أ ه ع ح غ خ",
+          examples: ["مِنْ عِلْمٍ (min 'ilm)", "مِنْ هَادٍ (min haadin)", "عَلِيمٌ حَكِيمٌ ('aleemun hakeem)"],
+          questions: [
+            { type: "mc", q: "How many throat letters trigger Izhar?", options: ["4", "5", "6", "7"], ans: 2, explanation: "Six throat letters: أ (hamza), ه (ha), ع ('ain), ح (ha), غ (ghain), خ (kha)", example: "مِنْ عِلْمٍ - clear noon before ع" },
+            { type: "mc", q: "In Izhar, the noon is pronounced:", options: ["With strong ghunnah", "Clearly without ghunnah", "Silent", "Merged"], ans: 1, explanation: "Izhar means clarity - pronounce the noon distinctly without nasalization.", example: "مِنْ هَادٍ - pronounce ن clearly" },
+            { type: "fill", q: "Type an Izhar letter (throat letter):", ans: "ع", explanation: "ع is one of the 6 throat letters that trigger izhar", example: "Other answers: أ ه ح غ خ" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_izhar",
+            article: "https://quranicarabic.com/tajweed/izhar"
+          }
+        },
+        { 
+          id: "4.2", 
+          title: "Idgham (Merging)",
+          intro: "Idgham means merging noon saakin/tanween into the next letter. With ghunnah: ي ن م و. Without ghunnah: ل ر",
+          examples: ["مِنْ مَاءٍ (mim maa')", "مِنْ وَرَائِهِمْ (min waraa'ihim)", "مِنْ رَبِّهِمْ (mir rabbihim)"],
+          questions: [
+            { type: "mc", q: "Which letters cause Idgham WITH ghunnah?", options: ["ل ر", "ي ن م و", "أ ه ع", "ط ب ج"], ans: 1, explanation: "ي ن م و (Ya, Noon, Meem, Waw) merge with ghunnah held for 2 counts.", example: "مِنْ مَاءٍ = mim maa' (merge ن into م with ghunnah)" },
+            { type: "mc", q: "Which letters cause Idgham WITHOUT ghunnah?", options: ["ي ن", "ل ر", "م و", "ب ج"], ans: 1, explanation: "ل ر (Lam, Ra) merge without any ghunnah - complete merging.", example: "مِنْ رَبِّهِمْ = mir rabbihim (no ghunnah)" },
+            { type: "mc", q: "In 'مِنْ وَرَائِهِمْ', the rule is:", options: ["Izhar", "Idgham with ghunnah", "Idgham without ghunnah", "Iqlab"], ans: 1, explanation: "و causes idgham with ghunnah - merge ن into و with nasal sound.", example: "مِنْ وَرَائِهِمْ = miw waraa'ihim" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_idgham",
+            article: "https://quranicarabic.com/tajweed/idgham"
+          }
+        },
+        { 
+          id: "4.3", 
+          title: "Iqlab (Conversion)",
+          intro: "Iqlab means to CONVERT noon saakin/tanween into م (meem) when followed by ب (ba). The م has ghunnah.",
+          examples: ["مِنْ بَعْدِ (mim ba'di)", "سَمِيعٌ بَصِيرٌ (samee'um baseer)", "أَنْبِئْ (ambi')"],
+          questions: [
+            { type: "mc", q: "Iqlab happens when noon is followed by:", options: ["م", "ب", "ل", "ر"], ans: 1, explanation: "When ب follows noon saakin or tanween, convert ن to م with ghunnah.", example: "مِنْ بَعْدِ = mim ba'di (ن becomes م)" },
+            { type: "mc", q: "In Iqlab, ن changes to:", options: ["ب", "م", "ل", "و"], ans: 1, explanation: "Noon is converted to meem, which is then pronounced with ghunnah.", example: "أَنْبِئْ = ambi' (ن becomes م)" },
+            { type: "fill", q: "In 'مِنْ بَعْدِ', pronounce as:", ans: "مِمْ", explanation: "Convert ن to م before ب", example: "مِنْ بَعْدِ = mim ba'di (not min ba'di)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_iqlab",
+            article: "https://quranicarabic.com/tajweed/iqlab"
+          }
+        },
+        { 
+          id: "4.4", 
+          title: "Ikhfa (Concealment)",
+          intro: "Ikhfa means to HIDE the noon saakin/tanween with ghunnah. It applies to the remaining 15 letters (not in Izhar, Idgham, or Iqlab).",
+          examples: ["مِنْ قَبْلِ (min qabli)", "أَنْصَارٌ (ansaaru)", "مِنْ شَرِّ (min sharri)"],
+          questions: [
+            { type: "mc", q: "How many letters trigger Ikhfa?", options: ["6", "10", "15", "20"], ans: 2, explanation: "15 letters remain after removing 6 (Izhar) + 4 (Idgham w/ghunnah) + 2 (Idgham w/o) + 1 (Iqlab) = 15", example: "د ذ ز س ش ص ض ط ظ ف ق ك are some ikhfa letters" },
+            { type: "mc", q: "In Ikhfa, the noon is:", options: ["Clear", "Hidden with ghunnah", "Converted to meem", "Silent"], ans: 1, explanation: "Ikhfa means concealment - hide the noon but keep the ghunnah sound.", example: "مِنْ قَبْلِ - hide ن but keep nasal sound" },
+            { type: "mc", q: "Which is an Ikhfa example?", options: ["مِنْ عِلْمٍ", "مِنْ بَعْدٍ", "مِنْ قَبْلِ", "مِنْ مَاءٍ"], ans: 2, explanation: "ق is an ikhfa letter, so مِنْ قَبْلِ uses ikhfa.", example: "مِنْ قَبْلِ = min qabli (with hidden ghunnah)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_ikhfa",
+            article: "https://quranicarabic.com/tajweed/ikhfa"
+          }
+        }
+      ] 
+    },
+    { 
+      id: "rule5", 
+      title: "👄 Meem Saakin Rules", 
+      lessons: [
+        { 
+          id: "5.1", 
+          title: "Ikhfa Shafawi (Lip Concealment)",
+          intro: "Ikhfa Shafawi occurs when مْ (meem saakin) is followed by ب (ba). Hide the meem with ghunnah. 'Shafawi' means 'related to lips'.",
+          examples: ["تَرْمِيهِم بِحِجَارَةٍ (tarmeehim bihijaarah)", "يَعْتَصِمْ بِاللَّهِ (ya'tasim billaah)"],
+          questions: [
+            { type: "mc", q: "Ikhfa Shafawi happens when مْ is followed by:", options: ["م", "ب", "ل", "ر"], ans: 1, explanation: "When ب follows meem saakin, hide the م with ghunnah (lip concealment).", example: "تَرْمِيهِم بِحِجَارَةٍ - hide م before ب" },
+            { type: "mc", q: "In Ikhfa Shafawi, the ghunnah is:", options: ["Absent", "Present", "Strong", "Weak"], ans: 1, explanation: "Ghunnah must be maintained while hiding the meem sound.", example: "يَعْتَصِمْ بِاللَّهِ - nasalize while hiding م" },
+            { type: "fill", q: "Ikhfa Shafawi involves which two letters?", ans: "مب", explanation: "Meem saakin followed by Ba", example: "مْ + ب = ikhfa shafawi" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_ikhfa_shafawi",
+            article: "https://quranicarabic.com/tajweed/ikhfa-shafawi"
+          }
+        },
+        { 
+          id: "5.2", 
+          title: "Idgham Shafawi (Lip Merging)",
+          intro: "Idgham Shafawi occurs when مْ (meem saakin) is followed by م (meem). Merge the two meems into one with ghunnah.",
+          examples: ["لَهُم مَّا يَشَاءُ (lahum maa yashaa')", "آمنتم بموسى (aamantum bimusa)"],
+          questions: [
+            { type: "mc", q: "Idgham Shafawi merges مْ into:", options: ["ب", "ل", "م", "ن"], ans: 2, explanation: "When م follows مْ, merge them into one meem with ghunnah.", example: "لَهُم مَّا = lahummaa (merge two meems)" },
+            { type: "mc", q: "In Idgham Shafawi, pronounce:", options: ["Two separate meems", "One meem with ghunnah", "No meem", "Meem without ghunnah"], ans: 1, explanation: "Merge both meems into one pronounced meem with 2-count ghunnah.", example: "آمنتم بموسى = aamantum bimusa (one strong meem)" },
+            { type: "mc", q: "Which shows Idgham Shafawi?", options: ["لَهُمْ ب", "لَهُمْ م", "لَهُمْ ل", "لَهُمْ و"], ans: 1, explanation: "لَهُم مَّا has meem saakin followed by meem.", example: "لَهُم مَّا = lahummaa" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_idgham_shafawi",
+            article: "https://quranicarabic.com/tajweed/idgham-shafawi"
+          }
+        },
+        { 
+          id: "5.3", 
+          title: "Izhar Shafawi (Lip Clarity)",
+          intro: "Izhar Shafawi means pronouncing مْ CLEARLY when followed by any letter except ب and م. This applies to 26 letters.",
+          examples: ["لَهُمْ فِيهَا (lahum feehaa)", "عَلَيْهِمْ وَلَا (alayhim wa laa)", "رَحِيمٌ قَدِيرٌ (raheemun qadeer)"],
+          questions: [
+            { type: "mc", q: "Izhar Shafawi applies to how many letters?", options: ["2", "15", "26", "28"], ans: 2, explanation: "All Arabic letters (28) except ب and م = 26 letters for izhar shafawi.", example: "مْ is clear before all letters except ب and م" },
+            { type: "mc", q: "In Izhar Shafawi, مْ is pronounced:", options: ["Hidden", "Merged", "Clearly", "Silent"], ans: 2, explanation: "Izhar means clarity - pronounce the meem distinctly without hiding or merging.", example: "لَهُمْ فِيهَا - pronounce م clearly" },
+            { type: "mc", q: "Which demonstrates Izhar Shafawi?", options: ["لَهُمْ ب", "لَهُمْ م", "لَهُمْ ف", "All of above"], ans: 2, explanation: "ف is not ب or م, so مْ is pronounced clearly before it.", example: "لَهُمْ فِيهَا = lahum feehaa (clear meem)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_izhar_shafawi",
+            article: "https://quranicarabic.com/tajweed/izhar-shafawi"
+          }
+        }
+      ] 
+    },
+    { 
+      id: "rule6", 
+      title: "🏆 Final Mastery Quiz", 
+      lessons: [
+        { 
+          id: "6.1", 
+          title: "Mixed Rules Challenge",
+          intro: "Test your knowledge with mixed Tajweed rules from all lessons. Identify the correct rule applied in each verse.",
+          examples: ["مِنْ عِلْمٍ (Izhar)", "مِنْ مَاءٍ (Idgham)", "أَحَدْ (Qalqalah)"],
+          questions: [
+            { type: "mc", q: "In 'مِنْ عِلْمٍ', the rule is:", options: ["Idgham", "Izhar", "Iqlab", "Ikhfa"], ans: 1, explanation: "ع is a throat letter, so نْ is pronounced clearly (Izhar).", example: "مِنْ عِلْمٍ = min 'ilm (clear noon)" },
+            { type: "mc", q: "In 'جَاءَ', the madd type is:", options: ["Tabiee", "Muttaasil", "Munfasil", "Laazim"], ans: 1, explanation: "Madd and hamza are in the same word = Muttaasil (connected).", example: "جَاءَ = jaa'a (4-5 counts)" },
+            { type: "mc", q: "In 'إِنَّ', the rule is:", options: ["Qalqalah", "Ghunnah", "Madd", "Izhar"], ans: 1, explanation: "نّ with shaddah produces ghunnah for 2 counts.", example: "إِنَّ = inna (nasalize noon)" },
+            { type: "mc", q: "In 'أَحَدْ', the rule is:", options: ["Madd", "Ghunnah", "Qalqalah", "Idgham"], ans: 2, explanation: "دْ at end of ayah with sukoon = Qalqalah Kubra (major bounce).", example: "أَحَدْ = ahad (strong bounce on dal)" },
+            { type: "mc", q: "In 'مِنْ بَعْدِ', the rule is:", options: ["Izhar", "Iqlab", "Idgham", "Ikhfa"], ans: 1, explanation: "ب after نْ converts noon to meem = Iqlab.", example: "مِنْ بَعْدِ = mim ba'di (ن becomes م)" }
+          ],
+          resources: {
+            video: "https://www.youtube.com/watch?v=example_mixed",
+            article: "https://quranicarabic.com/tajweed/complete-guide"
+          }
+        }
+      ] 
+    }
+  ];
+
+  // === STATE MANAGEMENT ===
+  const DEFAULT_STATE = { xp: 0, streak: 1, hearts: 5, completed: [], currentLesson: 0, questionIndex: 0 };
+  let state = JSON.parse(localStorage.getItem('tq_state')) || DEFAULT_STATE;
+  let currentLesson = null;
+  let currentQuestion = null;
+  let selectedOption = null;
+  let isAnswered = false;
+
+  function saveState() { localStorage.setItem('tq_state', JSON.stringify(state)); updateHeader(); }
+  function updateHeader() {
+    document.getElementById('xp-val').textContent = state.xp;
+    document.getElementById('streak-val').textContent = state.streak;
+    document.getElementById('hearts-val').textContent = state.hearts;
+  }
+
+  // === PATH RENDERER ===
+  function renderPath() {
+    const container = document.getElementById('path-view');
+    container.innerHTML = '<div class="path-line"></div>';
+    let lessonCounter = 0;
+    const totalLessons = CURRICULUM.reduce((a,r)=>a+r.lessons.length, 0);
+
+    CURRICULUM.forEach((rule, rIdx) => {
+      const section = document.createElement('div');
+      section.className = 'rule-section';
+      section.innerHTML = `<div class="rule-title">${rule.title}</div>`;
+      
+      rule.lessons.forEach((lesson, lIdx) => {
+        const globalIdx = lessonCounter++;
+        const id = `${rule.id}-${lesson.id}`;
+        const isCompleted = state.completed.includes(id);
+        const isCurrent = globalIdx === (state.completed.length === totalLessons ? totalLessons - 1 : state.completed.length);
+        const isLocked = !isCompleted && !isCurrent;
+        
+        const status = isCompleted ? 'completed' : isCurrent ? 'current' : 'locked';
+        const icon = isCompleted ? '✓' : isCurrent ? '▶' : '🔒';
+        
+        const node = document.createElement('div');
+        node.className = `path-row`;
+        node.innerHTML = `
+          <div class="lesson-node ${status}" onclick="${isLocked ? '' : `startLesson(${rIdx}, ${lIdx})`}">
+            ${icon}
+            <span class="lesson-label">L${lesson.id}</span>
+          </div>
+        `;
+        section.appendChild(node);
+      });
+      container.appendChild(section);
+    });
+  }
+
+  // === LESSON ENGINE ===
+  function startLesson(rIdx, lIdx) {
+    if(state.hearts <= 0) return showGameOver();
+    currentLesson = CURRICULUM[rIdx].lessons[lIdx];
+    state.currentLesson = `${rIdx}-${lIdx}`;
+    state.questionIndex = 0;
+    selectedOption = null;
+    isAnswered = false;
+    
+    document.getElementById('lesson-modal').classList.add('active');
+    const totalQ = currentLesson.questions.length;
+    const completedQ = state.completed.filter(id => id.startsWith(`${CURRICULUM[rIdx].id}-${currentLesson.id}`)).length;
+    document.getElementById('lesson-progress').style.width = `${((state.completed.length) / (CURRICULUM.reduce((a,r)=>a+r.lessons.length, 0))) * 100}%`;
+    
+    showLessonIntro();
+  }
+
+  function showLessonIntro() {
+    const container = document.getElementById('question-container');
+    document.getElementById('check-btn').textContent = 'START LESSON';
+    document.getElementById('check-btn').disabled = false;
+    document.getElementById('check-btn').onclick = startFirstQuestion;
+    
+    const l = currentLesson;
+    let html = `
+      <div class="lesson-intro">
+        <h3>${l.title}</h3>
+        <p>${l.intro}</p>
+        <div class="example-box">
+          <strong>Examples:</strong><br>
+          ${l.examples.map(ex => `<span class="arabic">${ex}</span>`).join(' | ')}
+        </div>
+      </div>
+      <p style="color:var(--muted); margin-top:20px;">${l.questions.length} questions to complete</p>
+    `;
+    container.innerHTML = html;
+  }
+
+  function startFirstQuestion() {
+    document.getElementById('check-btn').onclick = submitAnswer;
+    loadQuestion(0);
+  }
+
+  function loadQuestion(idx) {
+    state.questionIndex = idx;
+    currentQuestion = currentLesson.questions[idx];
+    isAnswered = false;
+    selectedOption = null;
+    
+    const container = document.getElementById('question-container');
+    document.getElementById('check-btn').disabled = true;
+    document.getElementById('check-btn').textContent = 'CHECK';
+    document.getElementById('feedback-bar').classList.remove('show');
+    
+    let html = `<h2 class="q-title">Question ${idx + 1} of ${currentLesson.questions.length}</h2>`;
+    html += `<p style="color:var(--muted); margin-bottom:15px;">${currentQuestion.q}</p>`;
+    
+    if(currentQuestion.type === 'mc') {
+      html += `<div class="options-grid">
+        ${currentQuestion.options.map((opt, i) => `<button class="option-btn" onclick="selectOption(this, ${i})">${opt}</button>`).join('')}
+      </div>`;
+    } else if(currentQuestion.type === 'fill') {
+      html += `<input type="text" id="fill-input" class="option-btn" style="width:100%; max-width:300px; margin:0 auto 20px; font-size:24px; text-align:center;" placeholder="Type answer..." oninput="validateFill(this.value)" autocomplete="off">`;
+    }
+    container.innerHTML = html;
+  }
+
+  function selectOption(el, idx) {
+    if(isAnswered) return;
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedOption = idx;
+    document.getElementById('check-btn').disabled = false;
+  }
+
+  function validateFill(val) {
+    document.getElementById('check-btn').disabled = val.trim().length < 1;
+  }
+
+  function submitAnswer() {
+    if(isAnswered) return;
+    isAnswered = true;
+    let isCorrect = false;
+    
+    if(currentQuestion.type === 'mc') {
+      isCorrect = selectedOption === currentQuestion.ans;
+      const btns = document.querySelectorAll('.option-btn');
+      btns[currentQuestion.ans].classList.add('correct');
+      if(!isCorrect && selectedOption !== null) btns[selectedOption].classList.add('wrong');
+    } else if(currentQuestion.type === 'fill') {
+      const val = document.getElementById('fill-input').value.trim();
+      isCorrect = val === currentQuestion.ans;
+      document.getElementById('fill-input').style.borderColor = isCorrect ? 'var(--primary)' : 'var(--danger)';
+    }
+
+    showFeedback(isCorrect);
+  }
+
+  function showFeedback(correct) {
+    const bar = document.getElementById('feedback-bar');
+    const txt = document.getElementById('fb-text');
+    const exp = document.getElementById('fb-explanation');
+    const ex = document.getElementById('fb-example');
+    
+    bar.className = `feedback-bar show ${correct ? 'correct' : 'wrong'}`;
+    txt.textContent = correct ? '✅ Excellent!' : '❌ Not quite right.';
+    exp.textContent = currentQuestion.explanation;
+    ex.innerHTML = `<strong>Example:</strong> ${currentQuestion.example}`;
+    
+    if(!correct) {
+      state.hearts = Math.max(0, state.hearts - 1);
+      saveState();
+    }
+  }
+
+  function nextQuestion() {
+    const bar = document.getElementById('feedback-bar');
+    bar.classList.remove('show');
+    
+    if(state.hearts <= 0) { closeLesson(); showGameOver(); return; }
+    
+    const nextIdx = state.questionIndex + 1;
+    if(nextIdx < currentLesson.questions.length) {
+      loadQuestion(nextIdx);
+    } else {
+      // Lesson complete
+      const id = `${CURRICULUM.find(r => r.lessons.includes(currentLesson)).id}-${currentLesson.id}`;
+      if(!state.completed.includes(id)) {
+        state.completed.push(id);
+        state.xp += currentLesson.questions.length * 5;
+        saveState();
+      }
+      closeLesson();
+      showComplete();
+    }
+  }
+
+  function closeLesson() {
+    document.getElementById('lesson-modal').classList.remove('active');
+    renderPath();
+  }
+
+  function showComplete() {
+    document.getElementById('res-title').textContent = '🎉 Lesson Complete!';
+    document.getElementById('res-xp').textContent = `+${currentLesson.questions.length * 5}`;
+    document.getElementById('res-msg').textContent = `You mastered ${currentLesson.title}! Keep up the great work.`;
+    document.getElementById('result-screen').classList.add('active');
+  }
+
+  function showGameOver() {
+    document.getElementById('res-title').textContent = '💔 Out of Hearts';
+    document.getElementById('res-xp').textContent = '0';
+    document.getElementById('res-msg').textContent = 'Take a break and review the rules, then try again!';
+    document.getElementById('result-screen').classList.add('active');
+  }
+
+  function closeResult() {
+    document.getElementById('result-screen').classList.remove('active');
+    renderPath();
+    if(state.hearts === 0) {
+      setTimeout(() => { state.hearts = 5; saveState(); }, 1000);
+    }
+  }
+
+  // === INIT ===
+  renderPath();
+  updateHeader();
+</script>
+</body>
+</html>
