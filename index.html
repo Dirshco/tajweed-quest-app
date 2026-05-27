@@ -40,7 +40,7 @@
       max-width: 500px;
       width: 100%;
       text-align: center;
-      margin-top: 40px;
+      margin-top: 20px;
     }
 
     .logo-area {
@@ -67,7 +67,7 @@
       border: 2px solid var(--border);
       border-radius: var(--radius);
       padding: 24px;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     }
 
@@ -88,6 +88,29 @@
       content: "⭐";
       margin-right: 12px;
       font-size: 1.1rem;
+    }
+
+    /* QR Code Styling Container */
+    .qr-container {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: var(--radius);
+      display: inline-block;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .qr-container img {
+      display: block;
+      width: 180px;
+      height: 180px;
+    }
+
+    .qr-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: -10px;
+      margin-bottom: 25px;
     }
 
     .download-btn {
@@ -133,8 +156,6 @@
       color: var(--secondary);
       margin-bottom: 10px;
       font-size: 1.05rem;
-      display: flex;
-      align-items: center;
     }
 
     .instructions ol {
@@ -145,6 +166,13 @@
 
     .instructions ol li {
       margin-bottom: 8px;
+    }
+
+    /* Hide QR code on small screens since you can't scan your own phone screen */
+    @media (max-width: 480px) {
+      .qr-container, .qr-label {
+        display: none;
+      }
     }
 
     footer {
@@ -167,7 +195,12 @@
         <li>Track your XP, streaks, and hearts</li>
         <li>Comprehensive Arabic script rule highlights</li>
       </ul>
-<!- https://dirshco.github.io/tajweed-quest-app/Tajweed_app-debug.apk ->
+
+      <div class="qr-container">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://dirshco.github.io/tajweed-quest-app/Tajweed_app-debug.apk&color=131f24" alt="Scan to download APK">
+      </div>
+      <p class="qr-label">Desktop user? Scan this code with your phone to download instantly.</p>
+
       <a href="https://dirshco.github.io/tajweed-quest-app/Tajweed_app-debug.apk" class="download-btn">
         🚀 Download for Android (.APK)
       </a>
@@ -178,9 +211,9 @@
     <div class="instructions">
       <h3>💡 How to Install:</h3>
       <ol>
-        <li>Click the green <strong>Download</strong> button above on your Android phone.</li>
-        <li>Open the completed <code>.apk</code> download file notification.</li>
-        <li>If prompted by Android security, click <strong>Settings</strong> and switch on <em>"Allow installation from this source"</em> (or choose <em>"Install Anyway"</em>).</li>
+        <li>Click the green button or scan the QR code on your phone to download the <code>.apk</code> file.</li>
+        <li>Open the completed download from your notification drawer or Files app.</li>
+        <li>If prompted by Android, choose <strong>"Install Anyway"</strong> or allow installation from unknown sources.</li>
       </ol>
     </div>
   </div>
