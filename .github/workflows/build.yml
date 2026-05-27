@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,7 +19,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
 
     - name: Set up Java JDK 17
       uses: actions/setup-java@v4
@@ -26,19 +29,25 @@ jobs:
 
     - name: Create Web App Scaffold
       run: |
-        # 1. Initialize a blank package structure
+        # 1. Initialize package structure
         npm init -y
         
         # 2. Install Capacitor Core and CLI dependencies
         npm install @capacitor/core @capacitor/cli
         
-        # 3. Create the standard web asset folder required by mobile apps
+        # 3. Create web asset destination folder
         mkdir -p www
         
-        # 4. FIX: Find ANY html file in the repo and copy it as www/index.html
-        cp *.html www/index.html
+        # 4. DEEP SEARCH: Look everywhere in the repo for any HTML file and copy it safely
+        find . -name "*.html" ! -path "*/node_modules/*" -exec cp {} www/index.html \; -quit
         
-        # 5. Initialize Capacitor configurations natively
+        # 5. Fallback validation: Verify that the file was actually found and moved
+        if [ ! -f www/index.html ]; then
+          echo "❌ ERROR: No HTML file found anywhere in your repository!"
+          exit 1
+        fi
+        
+        # 6. Initialize Capacitor configurations natively
         npx cap init TajweedQuest org.learning.tajweedquest --web-dir=www
 
     - name: Add Android Mobile Platform
