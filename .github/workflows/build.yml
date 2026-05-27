@@ -1,4 +1,4 @@
-name: Build Android APK (Capacitor Native Approach)
+name: Build Android APK (Capacitor Debug Mode)
 
 on:
   push:
@@ -16,6 +16,16 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
+    - name: DEBUG STEP 1 - Scan Repository Files
+      run: |
+        echo "============================================="
+        echo "🔍 STARTING DEBUG STEP 1: Repository File Scan"
+        echo "Current Workspace Path: $(pwd)"
+        echo "---------------------------------------------"
+        echo "📁 LISTING ALL FILES AND FOLDERS IN REPOSITORY:"
+        ls -R
+        echo "============================================="
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
@@ -27,44 +37,90 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Create Web App Scaffold
+    - name: DEBUG STEP 2 - Create Web App Scaffold
       run: |
-        # 1. Initialize package structure
+        echo "============================================="
+        echo "⚙️ STARTING DEBUG STEP 2: Creating Web Scaffold"
+        
+        echo "-> Running npm init..."
         npm init -y
         
-        # 2. Install Capacitor Core and CLI dependencies
+        echo "-> Installing Capacitor CLI..."
         npm install @capacitor/core @capacitor/cli
         
-        # 3. Create web asset destination folder
+        echo "-> Creating www directory..."
         mkdir -p www
         
-        # 4. DEEP SEARCH: Look everywhere in the repo for any HTML file and copy it safely
-        find . -name "*.html" ! -path "*/node_modules/*" -exec cp {} www/index.html \; -quit
+        echo "-> Searching for HTML game file..."
+        # This will search everywhere in the repo for any .html file
+        HTML_FILE=$(find . -name "*.html" ! -path "*/node_modules/*" | head -n 1)
         
-        # 5. Fallback validation: Verify that the file was actually found and moved
-        if [ ! -f www/index.html ]; then
-          echo "❌ ERROR: No HTML file found anywhere in your repository!"
+        if [ -z "$HTML_FILE" ]; then
+          echo "❌ ERROR: Could not find any HTML file in this repository!"
+          echo "Current directory contents:"
+          ls -la
+          exit 1
+        else
+          echo "✅ Found HTML File at: $HTML_FILE"
+          echo "-> Copying to www/index.html..."
+          cp "$HTML_FILE" www/index.html
+        fi
+        
+        echo "-> Verifying www folder contents..."
+        ls -la www/
+        
+        echo "-> Initializing Capacitor Project..."
+        npx cap init TajweedQuest org.learning.tajweedquest --web-dir=www
+        
+        echo "🎉 DEBUG STEP 2 COMPLETED SUCCESSFULLY."
+        echo "============================================="
+
+    - name: DEBUG STEP 3 - Add Android Mobile Platform
+      run: |
+        echo "============================================="
+        echo "🤖 STARTING DEBUG STEP 3: Adding Android Platform"
+        
+        echo "-> Installing @capacitor/android pack..."
+        npm install @capacitor/android
+        
+        echo "-> Adding android platform folder..."
+        npx cap add android
+        
+        echo "🎉 DEBUG STEP 3 COMPLETED SUCCESSFULLY."
+        echo "============================================="
+
+    - name: DEBUG STEP 4 - Build and Sync Android Assets
+      run: |
+        echo "============================================="
+        echo "🔄 STARTING DEBUG STEP 4: Capacitor Sync"
+        
+        npx cap sync android
+        
+        echo "🎉 DEBUG STEP 4 COMPLETED SUCCESSFULLY."
+        echo "============================================="
+
+    - name: DEBUG STEP 5 - Compile App Debug APK
+      run: |
+        echo "============================================="
+        echo "🏗️ STARTING DEBUG STEP 5: Gradle Compilation"
+        
+        if [ ! -d "android" ]; then
+          echo "❌ ERROR: 'android' directory does not exist!"
           exit 1
         fi
         
-        # 6. Initialize Capacitor configurations natively
-        npx cap init TajweedQuest org.learning.tajweedquest --web-dir=www
-
-    - name: Add Android Mobile Platform
-      run: |
-        npm install @capacitor/android
-        npx cap add android
-
-    - name: Build and Sync Android Assets
-      run: |
-        npx cap sync android
-
-    - name: Compile App Debug APK
-      run: |
-        cd android && ./gradlew assembleDebug
+        cd android
+        echo "-> Setting executable permissions on Gradle..."
+        chmod +x gradlew
+        
+        echo "-> Booting up local gradlew compile engine..."
+        ./gradlew assembleDebug
+        
+        echo "🎉 DEBUG STEP 5 COMPLETED SUCCESSFULLY."
+        echo "============================================="
 
     - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: TajweedQuest-Native-APK
+        name: TajweedQuest-Debug-APK
         path: android/app/build/outputs/apk/debug/app-debug.apk
