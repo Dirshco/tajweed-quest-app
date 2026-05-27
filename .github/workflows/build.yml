@@ -70,9 +70,9 @@ jobs:
         cd android
         chmod +x gradlew
         
-        # Build signed bundle using injection environment parameters natively
+        # Build signed bundle using absolute path injection environment parameters natively
         ./gradlew assembleRelease bundleRelease \
-          -Pandroid.injected.signing.store.file=release.keystore \
+          -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
           -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
           -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
           -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
