@@ -1,0 +1,84 @@
+name: Build Android Production AAB
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+
+    - name: Set up Java JDK 21
+      id: setup-java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '21'
+
+    - name: Create Web App Scaffold
+      run: |
+        npm init -y
+        npm install @capacitor/core @capacitor/cli
+        mkdir -p www
+        
+        HTML_FILE=$(find . -name "*.html" ! -path "*/node_modules/*" | head -n 1)
+        if [ -z "$HTML_FILE" ]; then
+          echo "❌ ERROR: Could not find any HTML file!"
+          exit 1
+        fi
+        cp "$HTML_FILE" www/index.html
+        npx cap init "TajweedQuest" "org.learning.tajweedquest" --web-dir=www
+
+    - name: Add Android Mobile Platform & Patch Permissions
+      run: |
+        npm install @capacitor/android
+        npx cap add android
+        
+        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST_PATH" ]; then
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST_PATH
+          sed -i 's/<application/<application android:usesCleartextTraffic="true"/g' $MANIFEST_PATH
+        fi
+
+    - name: Sync Web Assets to Native Project
+      run: |
+        npx cap sync android
+
+    - name: Decode Signing Keystore File Securely
+      run: |
+        # Recreates your local keystore file dynamically inside the cloud container securely
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+
+    - name: Compile Production App Bundle (.AAB)
+      run: |
+        export JAVA_HOME=${{ steps.setup-java.outputs.path }}
+        export PATH=$JAVA_HOME/bin:$PATH
+        
+        cd android
+        chmod +x gradlew
+        
+        # Build signed bundle using injection environment parameters natively
+        ./gradlew assembleRelease bundleRelease \
+          -Pandroid.injected.signing.store.file=release.keystore \
+          -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+
+    - name: Upload Finished Production AAB
+      uses: actions/upload-artifact@v4
+      with:
+        name: TajweedQuest-Production-AAB
+        path: android/app/build/outputs/bundle/release/app-release.aab
