@@ -32,46 +32,32 @@ jobs:
         node-version: '24'
 
     - name: Set up Java JDK 21
+      id: setup-java
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
-        java-version: '17'
+        java-version: '21'
 
     - name: DEBUG STEP 2 - Create Web App Scaffold
       run: |
         echo "============================================="
         echo "⚙️ STARTING DEBUG STEP 2: Creating Web Scaffold"
         
-        echo "-> Running npm init..."
         npm init -y
-        
-        echo "-> Installing Capacitor CLI..."
         npm install @capacitor/core @capacitor/cli
-        
-        echo "-> Creating www directory..."
         mkdir -p www
         
-        echo "-> Searching for HTML game file..."
-        # This will search everywhere in the repo for any .html file
         HTML_FILE=$(find . -name "*.html" ! -path "*/node_modules/*" | head -n 1)
         
         if [ -z "$HTML_FILE" ]; then
           echo "❌ ERROR: Could not find any HTML file in this repository!"
-          echo "Current directory contents:"
-          ls -la
           exit 1
         else
           echo "✅ Found HTML File at: $HTML_FILE"
-          echo "-> Copying to www/index.html..."
           cp "$HTML_FILE" www/index.html
         fi
         
-        echo "-> Verifying www folder contents..."
-        ls -la www/
-        
-        echo "-> Initializing Capacitor Project..."
         npx cap init TajweedQuest org.learning.tajweedquest --web-dir=www
-        
         echo "🎉 DEBUG STEP 2 COMPLETED SUCCESSFULLY."
         echo "============================================="
 
@@ -80,10 +66,7 @@ jobs:
         echo "============================================="
         echo "🤖 STARTING DEBUG STEP 3: Adding Android Platform"
         
-        echo "-> Installing @capacitor/android pack..."
         npm install @capacitor/android
-        
-        echo "-> Adding android platform folder..."
         npx cap add android
         
         echo "🎉 DEBUG STEP 3 COMPLETED SUCCESSFULLY."
@@ -104,10 +87,12 @@ jobs:
         echo "============================================="
         echo "🏗️ STARTING DEBUG STEP 5: Gradle Compilation"
         
-        if [ ! -d "android" ]; then
-          echo "❌ ERROR: 'android' directory does not exist!"
-          exit 1
-        fi
+        # FORCE: Explicitly link Java 21 to the current workspace step
+        export JAVA_HOME=${{ steps.setup-java.outputs.path }}
+        export PATH=$JAVA_HOME/bin:$PATH
+        
+        echo "Testing active Java compiler version..."
+        javac -version
         
         cd android
         echo "-> Setting executable permissions on Gradle..."
