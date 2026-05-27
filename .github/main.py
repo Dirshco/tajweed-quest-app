@@ -1,40 +1,48 @@
 import os
-import sys
-from PyQt6.QtCore import QUrl
-from PyQt6.QtWidgets import QApplication, QMainWindow
-from PyQt6.QtWebEngineCore import QWebEngineProfile
-from PyQt6.QtWebEngineWidgets import QWebEngineView
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
 
-class TajweedQuestApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("TajweedQuest Mobile Preview")
-        self.resize(450, 800)  # Mobile view dimension
+# Simple safe platform detection
+try:
+    from jnius import autoclass
+    from android.runnable import run_on_ui_thread
+    ON_ANDROID = True
+except ImportError:
+    ON_ANDROID = False
 
-        # Create embedded browser view
-        self.browser = QWebEngineView()
+class TajweedQuestApp(App):
+    def build(self):
+        layout = BoxLayout(orientation='vertical')
         
-        # Enable Local Storage (saves your XP/Hearts progress)
-        profile = QWebEngineProfile.defaultProfile()
-        profile.setPersistentStoragePath(os.path.abspath("./storage"))
-
-        # --- FIX: Dynamically find the folder where main.py sits ---
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        html_filename = "Tajweed_quest_full_20260523_6mdqn9k67.html"
-        html_path = os.path.join(script_dir, html_filename)
+        # Point to your exact file name
+        self.html_filename = "Tajweed_quest_full_20260523_6mdqn9k67.html"
         
-        # Double check if the file is truly there to prevent crashes
-        if not os.path.exists(html_path):
-            print(f"Error: Could not find '{html_filename}' in folder: {script_dir}")
-            print("Please make sure the HTML file is placed in the exact same folder as main.py!")
-            sys.exit(1)
+        if ON_ANDROID:
+            self.start_android_webview()
+        else:
+            print("Running on desktop/simulation runner setup.")
+            
+        return layout
 
-        # Load the HTML file directly into the app window
-        self.browser.setUrl(QUrl.fromLocalFile(html_path))
-        self.setCentralWidget(self.browser)
+    def start_android_webview(self):
+        @run_on_ui_thread
+        def launch():
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            WebView = autoclass('android.webkit.WebView')
+            WebViewClient = autoclass('android.webkit.WebViewClient')
+            
+            activity = PythonActivity.mActivity
+            webview = WebView(activity)
+            webview.getSettings().setJavaScriptEnabled(True)
+            webview.getSettings().setDomStorageEnabled(True)
+            webview.getSettings().setAllowFileAccess(True)
+            
+            webview.setWebViewClient(WebViewClient())
+            activity.setContentView(webview)
+            
+            # This loads the file from your compiled APK assets folder
+            webview.loadUrl(f"file:///android_asset/{self.html_filename}")
+        launch()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = TajweedQuestApp()
-    window.show()
-    sys.exit(app.exec())
+if __name__ == '__main__':
+    TajweedQuestApp().run()
