@@ -35,8 +35,8 @@ jobs:
         # 3. Create the standard web asset folder required by mobile apps
         mkdir -p www
         
-        # 4. Copy your Tajweed HTML file directly into the folder as index.html
-        cp Tajweed_quest_full_20260523_6mdqn9k67.html www/index.html
+        # 4. FIX: Find ANY html file in the repo and copy it as www/index.html
+        cp *.html www/index.html
         
         # 5. Initialize Capacitor configurations natively
         npx cap init TajweedQuest org.learning.tajweedquest --web-dir=www
